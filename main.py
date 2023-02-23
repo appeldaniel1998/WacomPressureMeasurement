@@ -3,6 +3,7 @@ from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 import pandas as pd
+import os
 
 
 class TabletSampleWindow(QWidget):
@@ -21,6 +22,7 @@ class TabletSampleWindow(QWidget):
         self.move(-9, 0)
         self.data = []
         self.setWindowTitle("Sample Tablet Event Handling")
+        self.current_draw_count = 0
 
     def tabletEvent(self, tabletEvent):
         self.pen_x = tabletEvent.pos().x()
@@ -60,15 +62,42 @@ class TabletSampleWindow(QWidget):
                 painter.drawLine(p1, p2)
 
     def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Escape:
+        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
+            self.current_draw_count += 1
+            if self.current_draw_count <= 30:
+                self.save_data()
+                self.lines = []
+                self.data = []
+                self.update()
+            else:
+                self.close()
+        elif event.key() == Qt.Key_Escape:
             self.close()
 
     def save_data(self):
+        if len(self.data) < 2:
+            return
+        folder_name = 'test_subject001'
+        number = int(folder_name[len(folder_name) - 3:])
+        while os.path.exists(folder_name):
+            number += 1
+            folder_name = 'test_subject' + str(number).zfill(3)
+        if not os.path.exists(folder_name) and self.current_draw_count == 1:
+            os.makedirs(folder_name)
+        else:
+            folder_name = 'test_subject' + str(number - 1).zfill(3)
         df = pd.DataFrame(self.data, columns=['X Value', 'Y Value', 'Pressure', 'Timestamp'])
         try:
-            df.to_csv('tablet_data.csv')
+            file_name = 'test_exercise' + str(self.current_draw_count) + '.csv'
+            file_path = os.path.join(folder_name, file_name)
+            df.to_csv(file_path)
         except:
             print("Error saving data")
+        self.lines = []
+        self.data = []
+        self.update()
+        new_whiteboard = TabletSampleWindow(self.parent())
+        new_whiteboard.show()
 
 
 if __name__ == '__main__':
